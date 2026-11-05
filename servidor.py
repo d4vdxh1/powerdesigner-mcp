@@ -206,5 +206,330 @@ def guardar_modelo() -> dict:
             "mensaje": "Se ejecuto Save; comprobar el resultado en PowerDesigner.",
         }
 
+# -------------------- Nuevas funciones de geometria --------------------
+
+
+def _diagrama(modelo, ruta_diagrama):
+    if not ruta_diagrama or not all(
+        paso.startswith("ClassDiagrams:") or paso.startswith("Packages:")
+        for paso in ruta_diagrama
+    ):
+        raise ValueError("Indica la ruta de un diagrama de clases existente.")
+    d = resolver(modelo, ruta_diagrama)
+    if str(d.ClassName) != "Class Diagram":
+        raise ValueError("Solo se permite trabajar en diagramas de clases.")
+    return d
+
+
+def _id(obj):
+    try:
+        return str(obj.ObjectID)
+    except Exception:
+        return None
+
+
+def _objeto_simbolo(simbolo):
+    try:
+        return simbolo.Object
+    except Exception:
+        return None
+
+
+def _xy_posicion(simbolo):
+    try:
+        pos = simbolo.Position
+        return {"x": int(pos.X), "y": int(pos.Y)}
+    except Exception:
+        return None
+
+
+def _tamano(simbolo):
+    try:
+        return {"ancho": int(simbolo.Width), "alto": int(simbolo.Height)}
+    except Exception:
+        try:
+            sz = simbolo.Size
+            return {"ancho": int(sz.X), "alto": int(sz.Y)}
+        except Exception:
+            return None
+
+
+def _puntos(simbolo):
+    try:
+        lista = simbolo.ListOfPoints
+        return [
+            {"x": int(lista.Item(i).X), "y": int(lista.Item(i).Y)}
+            for i in range(int(lista.Count))
+        ]
+    except Exception:
+        return None
+
+
+def _mapa_simbolos(diagrama):
+    """No usa Symbol.ObjectID: algunos simbolos de PowerDesigner no lo tienen."""
+    mapa = {}
+    extras = []
+    for indice, simbolo in enumerate(diagrama.Symbols):
+        obj = _objeto_simbolo(simbolo)
+        oid = _id(obj) if obj is not None else None
+        tipo = dato(obj, "ClassName") if obj is not None else None
+        registro = {
+            "indice": indice,
+            "tipo": tipo or dato(simbolo, "ClassName"),
+            "nombre": dato(obj, "Name") if obj is not None else None,
+            "objeto_id": oid,
+            "posicion": _xy_posicion(simbolo),
+            "tamano": _tamano(simbolo),
+            "puntos_flecha": _puntos(simbolo),
+        }
+        if obj is not None and tipo == "Dependency":
+            for k in ("Object1", "Object2"):
+                try:
+                    ext = getattr(obj, k)
+                    registro[k] = dato(ext, "Name")
+                except Exception:
+                    pass
+        if oid:
+            mapa.setdefault(oid, []).append((simbolo, registro))
+        extras.append(registro)
+    return mapa, extras
+
+
+def _seleccionar_unico(mapa, oid, tipo):
+    coincidencias = [
+        par for par in mapa.get(oid, []) if par[1]["tipo"] == tipo
+    ]
+    if len(coincidencias) != 1:
+        raise ValueError(
+            f"Se esperaban 1 simbolo de tipo {tipo} con id {oid}, "
+            f"se encontraron {len(coincidencias)}. Revisar inspeccionar_diagrama."
+        )
+    return coincidencias[0][0]
+
+
+def _entero_acotado(valor, etiqueta):
+    if type(valor) is not int or not -2_000_000 <= valor <= 2_000_000:
+        raise ValueError(f"{etiqueta}: usar entero entre -2000000 y 2000000.")
+    return valor
+
+
+def _refrescar(diagrama):
+    try:
+        diagrama.RedrawAllViews()
+    except Exception:
+        pass
+
+
+@mcp.tool()
+def inspeccionar_diagrama(ruta_diagrama: list[str]) -> dict:
+    """Lista la geometria real de paquetes, dependencias y notas del diagrama.
+    No modifica nada. Proporciona objeto_id, posicion, tamano y puntos de flecha.
+    """
+    with conexion() as (_, modelo):
+        diagrama = _diagrama(modelo, ruta_diagrama)
+        _, elementos = _mapa_simbolos(diagrama)
+        return {
+            "modelo": dato(modelo, "Name"),
+            "diagrama": dato(diagrama, "Name"),
+            "unidades": "coordenadas internas de PowerDesigner, NO pixeles",
+            "total": len(elementos),
+            "simbolos": elementos,
+        }
+
+
+@mcp.tool()
+def mover_paquetes(
+    ruta_diagrama: list[str],
+    movimientos: list[dict],
+    confirmar: bool = False,
+) -> dict:
+    """Mueve SOLO simbolos de paquetes, sin cambiar relaciones ni clases.
+    movimientos: [{"objeto_id":"{GUID}", "x":10000, "y":20000}, ...].
+    Por defecto solo PREVISUALIZA. confirmar=True aplica cambios EN MEMORIA.
+    Crea respaldo antes de editar. Luego llamar guardar_modelo.
+    """
+    if not movimientos or len(movimientos) > 30:
+        raise ValueError("Indicar entre 1 y 30 movimientos.")
+    with conexion() as (_, modelo):
+        diagrama = _diagrama(modelo, ruta_diagrama)
+        mapa, _ = _mapa_simbolos(diagrama)
+        usados = set()
+        plan = []
+        for movimiento in movimientos:
+            oid = movimiento.get("objeto_id")
+            if not isinstance(oid, str) or oid in usados:
+                raise ValueError("objeto_id ausente o repetido.")
+            usados.add(oid)
+            x = _entero_acotado(movimiento.get("x"), "x")
+            y = _entero_acotado(movimiento.get("y"), "y")
+            simbolo = _seleccionar_unico(mapa, oid, "Package")
+            anterior = _xy_posicion(simbolo)
+            if anterior is None:
+                raise ValueError(f"No pude leer Position de {oid}.")
+            plan.append({
+                "objeto_id": oid,
+                "nombre": dato(_objeto_simbolo(simbolo), "Name"),
+                "antes": anterior,
+                "despues": {"x": x, "y": y},
+                "_simbolo": simbolo,
+            })
+        visible = [
+            {k: v for k, v in p.items() if not k.startswith("_")}
+            for p in plan
+        ]
+        if not confirmar:
+            return {"aplicado": False, "previsualizacion": visible}
+        respaldo = respaldar(modelo)
+        procesados = []
+        try:
+            for p in plan:
+                simbolo = p["_simbolo"]
+                nueva = simbolo.Position
+                nueva.X = p["despues"]["x"]
+                nueva.Y = p["despues"]["y"]
+                simbolo.Position = nueva
+                leida = _xy_posicion(simbolo)
+                if leida != p["despues"]:
+                    raise RuntimeError(f"Posicion no confirmada para {p['nombre']}: {leida}")
+                procesados.append(p)
+            _refrescar(diagrama)
+        except Exception as exc:
+            for p in reversed(plan):
+                try:
+                    s = p["_simbolo"]
+                    pos = s.Position
+                    pos.X, pos.Y = p["antes"]["x"], p["antes"]["y"]
+                    s.Position = pos
+                except Exception:
+                    pass
+            _refrescar(diagrama)
+            raise RuntimeError(
+                "No se pudo completar el movimiento. Se intento restaurar "
+                "la geometria previa en memoria; verificar el respaldo. "
+                + str(exc)
+            ) from exc
+        return {
+            "aplicado": True,
+            "movimientos": visible,
+            "respaldo": respaldo,
+            "nota": "Cambios en memoria. Ejecutar guardar_modelo tras revisar.",
+        }
+
+
+def _sustituir_puntos(simbolo, puntos):
+    """Recrea trazado con los metodos documentados de PtList.
+    Remove elimina el ultimo punto; AddPoint agrega uno al final.
+    """
+    lista = simbolo.ListOfPoints
+    while int(lista.Count) > 1:
+        lista.Remove()
+    for p in puntos[1:]:
+        lista.AddPoint(p["x"], p["y"])
+
+
+@mcp.tool()
+def enderezar_flechas(
+    ruta_diagrama: list[str],
+    dependencias_ids: list[str],
+    confirmar: bool = False,
+) -> dict:
+    """Quita los puntos intermedios de dependencias concretas.
+    Mantiene el punto inicial y el final. NO invierte la flecha ni modifica
+    Object1/Object2. Primero PREVISUALIZAR; confirmar=True edita EN MEMORIA.
+    Utilizar despues de mover paquetes; luego guardar_modelo.
+    """
+    if not dependencias_ids or len(dependencias_ids) > 30:
+        raise ValueError("Indicar de 1 a 30 IDs de dependencias.")
+    if len(set(dependencias_ids)) != len(dependencias_ids):
+        raise ValueError("IDs de dependencias repetidos.")
+    with conexion() as (_, modelo):
+        diagrama = _diagrama(modelo, ruta_diagrama)
+        mapa, _ = _mapa_simbolos(diagrama)
+        plan = []
+        for oid in dependencias_ids:
+            simbolo = _seleccionar_unico(mapa, oid, "Dependency")
+            antes = _puntos(simbolo)
+            if antes is None or len(antes) < 2:
+                raise ValueError(f"No se pudo leer ListOfPoints: {oid}")
+            plan.append({
+                "objeto_id": oid, "antes": antes,
+                "despues": [antes[0], antes[-1]], "_simbolo": simbolo,
+            })
+        visible = [
+            {k: v for k, v in p.items() if not k.startswith("_")}
+            for p in plan
+        ]
+        if not confirmar:
+            return {"aplicado": False, "previsualizacion": visible}
+        respaldo = respaldar(modelo)
+        try:
+            for p in plan:
+                _sustituir_puntos(p["_simbolo"], p["despues"])
+            _refrescar(diagrama)
+        except Exception as exc:
+            for p in plan:
+                try:
+                    _sustituir_puntos(p["_simbolo"], p["antes"])
+                except Exception:
+                    pass
+            _refrescar(diagrama)
+            raise RuntimeError(
+                "Falló la edicion de rutas; se intento restaurar los puntos "
+                "anteriores. Verificar el respaldo. " + str(exc)
+            ) from exc
+        return {
+            "aplicado": True,
+            "dependencias": visible,
+            "respaldo": respaldo,
+            "nota": "Revisar visualmente las flechas y guardar_modelo.",
+        }
+
+
+@mcp.tool()
+def insertar_codo_flecha(
+    ruta_diagrama: list[str],
+    dependencia_id: str,
+    x: int,
+    y: int,
+    confirmar: bool = False,
+) -> dict:
+    """Inserta UN codo intermedio en una dependencia de dos puntos.
+    No cambia los extremos UML. Usa PtList.InsertPoint(1,x,y).
+    PREVISUALIZA por defecto. Antes, usar enderezar_flechas si hay mas de
+    dos puntos. Guardar despues de comprobar el resultado.
+    """
+    x = _entero_acotado(x, "x")
+    y = _entero_acotado(y, "y")
+    with conexion() as (_, modelo):
+        diagrama = _diagrama(modelo, ruta_diagrama)
+        mapa, _ = _mapa_simbolos(diagrama)
+        simbolo = _seleccionar_unico(mapa, dependencia_id, "Dependency")
+        antes = _puntos(simbolo)
+        if antes is None or len(antes) != 2:
+            raise ValueError(
+                "Esta herramienta requiere una flecha de exactamente "
+                "dos puntos. Inspeccionar y enderezar antes."
+            )
+        despues = [antes[0], {"x": x, "y": y}, antes[1]]
+        if not confirmar:
+            return {"aplicado": False, "antes": antes, "despues": despues}
+        respaldo = respaldar(modelo)
+        try:
+            simbolo.ListOfPoints.InsertPoint(1, x, y)
+            _refrescar(diagrama)
+        except Exception as exc:
+            try:
+                _sustituir_puntos(simbolo, antes)
+            except Exception:
+                pass
+            raise RuntimeError(
+                "No se pudo insertar codo. Se intento restaurar la ruta. "
+                + str(exc)
+            ) from exc
+        return {
+            "aplicado": True, "antes": antes,
+            "despues": _puntos(simbolo), "respaldo": respaldo,
+        }
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
