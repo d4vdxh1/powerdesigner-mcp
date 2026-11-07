@@ -9,19 +9,46 @@ try {
         $clave | Export-Clixml -Path $archivoClave
     }
 
+    # Leer configuracion antes de iniciar el servidor: modo solo lectura por defecto.
+    $archivoConfig = Join-Path $PSScriptRoot "config.local.json"
+    if (-not (Test-Path $archivoConfig)) {
+        throw "Copia config.example.json a config.local.json y completa tu tunnel_id."
+    }
+    $config = Get-Content $archivoConfig -Raw | ConvertFrom-Json
+    $modeloEscritura = ""
+    if ($null -ne $config.write_model) {
+        $modeloEscritura = [string]$config.write_model
+    }
+    if ($modeloEscritura.Trim() -ne "") {
+        if (-not [System.IO.Path]::IsPathRooted($modeloEscritura)) {
+            throw "write_model debe ser una ruta absoluta."
+        }
+        if (-not (Test-Path -LiteralPath $modeloEscritura -PathType Leaf)) {
+            throw "write_model no existe: $modeloEscritura"
+        }
+    }
+
     # Inicia el servidor en otra ventana si el puerto esta libre.
     $servidorActivo = Get-NetTCPConnection `
         -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
 
     if (-not $servidorActivo) {
-        Start-Process powershell.exe `
-            -WorkingDirectory $PSScriptRoot `
-            -ArgumentList @(
-                "-NoProfile",
-                "-NoExit",
-                "-Command",
-                "& '.\.venv\Scripts\python.exe' 'servidor.py'"
-            )
+        # El proceso hijo hereda solo la ruta autorizada; no hereda claves API.
+        $anterior = [Environment]::GetEnvironmentVariable("POWERDESIGNER_MCP_WRITE_MODEL", "Process")
+        try {
+            [Environment]::SetEnvironmentVariable("POWERDESIGNER_MCP_WRITE_MODEL", $modeloEscritura, "Process")
+            Start-Process powershell.exe `
+                -WorkingDirectory $PSScriptRoot `
+                -ArgumentList @(
+                    "-NoProfile",
+                    "-NoExit",
+                    "-Command",
+                    "& '.\.venv\Scripts\python.exe' 'servidor.py'"
+                )
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable("POWERDESIGNER_MCP_WRITE_MODEL", $anterior, "Process")
+        }
         Start-Sleep -Seconds 3
     }
 
@@ -30,11 +57,6 @@ try {
         [System.Net.NetworkCredential]::new("", $clave)
     ).Password
 
-    $archivoConfig = Join-Path $PSScriptRoot "config.local.json"
-    if (-not (Test-Path $archivoConfig)) {
-        throw "Copia config.example.json a config.local.json y completa tu tunnel_id."
-    }
-    $config = Get-Content $archivoConfig -Raw | ConvertFrom-Json
     if ($config.tunnel_id -notmatch '^tunnel_[a-z0-9_]+$' -or $config.tunnel_id -eq 'tunnel_REEMPLAZAR') {
         throw "Configura un tunnel_id valido en config.local.json."
     }
