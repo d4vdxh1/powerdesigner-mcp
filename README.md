@@ -89,7 +89,7 @@ La clave secreta no se escribe en este JSON.
 3. La primera vez ingresá la clave de API cuando se solicite. PowerShell la guarda como SecureString cifrado para el usuario de Windows en `clave_tunel.xml`.
 4. Dejá abiertas las ventanas del servidor y del cliente del túnel.
 
-El iniciador reutiliza un proceso que esté escuchando en el puerto 8000; no verifica que sea este servidor. Si modificaste `servidor.py`, detené la ventana del servidor anterior antes de volver a iniciar. No abras varios clientes del mismo túnel.
+En esta rama, el iniciador se detiene si el puerto 8000 está ocupado, para evitar reutilizar inadvertidamente un proceso anterior sin la política de escritura. Detené la instancia previa antes de iniciar esta versión. No abras varios clientes del mismo túnel.
 
 ## 5. Conectar ChatGPT
 
@@ -98,6 +98,23 @@ Con el túnel ejecutándose, agregá un servidor MCP personalizado desde Complem
 Conectá el complemento y probá: «Consultá el modelo activo de PowerDesigner». Después: «Listá la colección UseCaseDiagrams del modelo activo». El tipo de modelo determina qué colecciones existen.
 
 Si cambian las herramientas del servidor, actualizalas desde ChatGPT o reconectá el complemento. No es un paso de uso diario obligatorio.
+
+## Protección de escritura (rama en desarrollo)
+
+Por defecto, el servidor funciona **en modo solo lectura**. Las herramientas que modifican el modelo (incluido `guardar_modelo`) rechazan la operación si no hay un archivo autorizado.
+
+Para habilitar escrituras sobre **un solo archivo**, completá en `config.local.json` el campo opcional `write_model` con la ruta absoluta de ese modelo, por ejemplo:
+
+```json
+{
+  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO",
+  "write_model": "C:\\Modelos\\modelo_prueba.oom"
+}
+```
+
+La ruta debe existir. Reiniciá el servidor después de cambiar la configuración. Si dejás `write_model` vacío, no hay autorización de escritura. No alcanza con tener el archivo abierto: el modelo activo debe coincidir con esa ruta. Ejecutar `servidor.py` directamente sin definir la variable de entorno `POWERDESIGNER_MCP_WRITE_MODEL` también deja deshabilitadas las escrituras.
+
+**Importante:** no expongas el puerto 8000 en la red ni consideres esta comparación de rutas un mecanismo de autenticación de usuarios. El iniciador se detiene si el puerto está ocupado en lugar de conectarse a un servidor previo que podría no tener estas protecciones. Las operaciones pueden fallar parcialmente y no tienen rollback transaccional.
 
 ## Uso diario y guardado
 
