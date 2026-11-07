@@ -32,6 +32,9 @@ try {
     $servidorActivo = Get-NetTCPConnection `
         -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
 
+    if ($servidorActivo) {
+        throw "El puerto 8000 ya esta ocupado. Detene la instancia anterior antes de iniciar este servidor protegido."
+    }
     if (-not $servidorActivo) {
         # El proceso hijo hereda solo la ruta autorizada; no hereda claves API.
         $anterior = [Environment]::GetEnvironmentVariable("POWERDESIGNER_MCP_WRITE_MODEL", "Process")
