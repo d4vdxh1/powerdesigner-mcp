@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import pythoncom
 import win32com.client
 from mcp.server.fastmcp import FastMCP
+from seguridad import verificar_modelo_autorizado
 
 mcp = FastMCP(
     "PowerDesigner MCP", host="127.0.0.1", port=8000,
@@ -62,6 +63,7 @@ def resolver(modelo, ruta):
 
 def respaldar(modelo):
     nombre = str(modelo.FileName or "")
+    verificar_modelo_autorizado(nombre)
     archivo = Path(nombre)
     if not nombre or not archivo.is_file():
         raise ValueError("Guarda primero el modelo desde PowerDesigner.")
