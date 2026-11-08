@@ -6,6 +6,7 @@ import pythoncom
 import win32com.client
 from mcp.server.fastmcp import FastMCP
 from seguridad import verificar_modelo_autorizado
+from geometria_validacion import coordenadas_coinciden
 
 mcp = FastMCP(
     "PowerDesigner MCP", host="127.0.0.1", port=8000,
@@ -391,8 +392,10 @@ def mover_paquetes(
                 nueva.Y = p["despues"]["y"]
                 simbolo.Position = nueva
                 leida = _xy_posicion(simbolo)
-                if leida != p["despues"]:
+                if not coordenadas_coinciden(leida, p["despues"]):
                     raise RuntimeError(f"Posicion no confirmada para {p['nombre']}: {leida}")
+                # Report the actual COM position; rounding of 1 internal unit is expected.
+                p["real"] = leida
                 procesados.append(p)
             _refrescar(diagrama)
         except Exception as exc:
@@ -412,7 +415,10 @@ def mover_paquetes(
             ) from exc
         return {
             "aplicado": True,
-            "movimientos": visible,
+            "movimientos": [
+                {k: v for k, v in p.items() if not k.startswith("_")}
+                for p in plan
+            ],
             "respaldo": respaldo,
             "nota": "Cambios en memoria. Ejecutar guardar_modelo tras revisar.",
         }
