@@ -12,7 +12,7 @@ La computadora debe permanecer encendida, conectada a Internet y sin suspender m
 
 ## Qué contiene esta versión
 
-Se tomó como base el `servidor.py` del comprimido entregado por el autor, no la versión de ejecución general de Python propuesta en la conversación.
+La rama `feature/integrar-geometria-mcp` integra las siete herramientas originales con cuatro herramientas de geometría verificadas en PowerDesigner 16.5 sobre un **modelo de prueba**. No es una versión estable ni está lista para distribución general.
 
 | Herramienta | Función |
 |---|---|
@@ -23,10 +23,16 @@ Se tomó como base el `servidor.py` del comprimido entregado por el autor, no la
 | `crear_objeto` | Crear actores o casos de uso |
 | `mostrar_en_diagrama` | Representar un objeto existente en un diagrama |
 | `guardar_modelo` | Ejecutar Save sobre el modelo activo |
+| `inspeccionar_diagrama` | Leer geometría de símbolos en diagramas de clases, sin cambios |
+| `mover_paquetes` | Previsualizar o mover símbolos de paquetes por coordenadas |
+| `enderezar_flechas` | Previsualizar o quitar puntos intermedios de dependencias |
+| `insertar_codo_flecha` | Previsualizar o insertar un punto intermedio en una dependencia de dos puntos |
 
-No incorpora `ejecutar_python_powerdesigner`, edición de multiplicidades, expresiones de decisiones ni posicionamiento de símbolos. No afirmar esas capacidades al usar esta versión.
+Las tres herramientas que editan geometría usan `confirmar=False` por defecto. Solo `confirmar=True` aplica modificaciones **en memoria**; para persistirlas hay que guardar el modelo. Trabajan únicamente sobre diagramas de clases y requieren identificadores de objetos obtenidos mediante inspección.
 
-Se añadió HTTP sin estado para evitar depender de sesiones conservadas entre reinicios. Las rutas de símbolos sin `ObjectID` usan índices de enumeración `@0`, `@1`, etc.; después de agregar o eliminar objetos hay que volver a listar la colección. Estas correcciones se verificaron con objetos simulados, no en una instalación real de PowerDesigner.
+Esta versión **no** incluye ejecución arbitraria de Python en PowerDesigner, edición de multiplicidades ni edición de expresiones de decisiones. Tampoco implementa reordenamiento automático integral de un diagrama: las coordenadas y dependencias concretas deben suministrarse explícitamente.
+
+Se conserva HTTP sin estado para evitar depender de sesiones conservadas entre reinicios. Las rutas de símbolos sin `ObjectID` usan índices de enumeración `@0`, `@1`, etc.; después de agregar o eliminar objetos hay que volver a listar la colección. La integración se probó mediante COM en PowerDesigner 16.5 con un modelo de prueba; esto no garantiza compatibilidad con otros modelos, versiones o computadoras.
 
 ## Requisitos
 
@@ -83,7 +89,7 @@ La clave secreta no se escribe en este JSON.
 3. La primera vez ingresá la clave de API cuando se solicite. PowerShell la guarda como SecureString cifrado para el usuario de Windows en `clave_tunel.xml`.
 4. Dejá abiertas las ventanas del servidor y del cliente del túnel.
 
-El iniciador reutiliza un proceso que esté escuchando en el puerto 8000; no verifica que sea este servidor. Si modificaste `servidor.py`, detené la ventana del servidor anterior antes de volver a iniciar. No abras varios clientes del mismo túnel.
+En esta rama, el iniciador se detiene si el puerto 8000 está ocupado, para evitar reutilizar inadvertidamente un proceso anterior sin la política de escritura. Detené la instancia previa antes de iniciar esta versión. No abras varios clientes del mismo túnel.
 
 ## 5. Conectar ChatGPT
 
@@ -92,6 +98,23 @@ Con el túnel ejecutándose, agregá un servidor MCP personalizado desde Complem
 Conectá el complemento y probá: «Consultá el modelo activo de PowerDesigner». Después: «Listá la colección UseCaseDiagrams del modelo activo». El tipo de modelo determina qué colecciones existen.
 
 Si cambian las herramientas del servidor, actualizalas desde ChatGPT o reconectá el complemento. No es un paso de uso diario obligatorio.
+
+## Protección de escritura (rama en desarrollo)
+
+Por defecto, el servidor funciona **en modo solo lectura**. Las herramientas que modifican el modelo (incluido `guardar_modelo`) rechazan la operación si no hay un archivo autorizado.
+
+Para habilitar escrituras sobre **un solo archivo**, completá en `config.local.json` el campo opcional `write_model` con la ruta absoluta de ese modelo, por ejemplo:
+
+```json
+{
+  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO",
+  "write_model": "C:\\Modelos\\modelo_prueba.oom"
+}
+```
+
+La ruta debe existir. Reiniciá el servidor después de cambiar la configuración. Si dejás `write_model` vacío, no hay autorización de escritura. No alcanza con tener el archivo abierto: el modelo activo debe coincidir con esa ruta. Ejecutar `servidor.py` directamente sin definir la variable de entorno `POWERDESIGNER_MCP_WRITE_MODEL` también deja deshabilitadas las escrituras.
+
+**Importante:** no expongas el puerto 8000 en la red ni consideres esta comparación de rutas un mecanismo de autenticación de usuarios. El iniciador se detiene si el puerto está ocupado en lugar de conectarse a un servidor previo que podría no tener estas protecciones. Las operaciones pueden fallar parcialmente y no tienen rollback transaccional.
 
 ## Uso diario y guardado
 
@@ -116,6 +139,13 @@ Consultá [docs/SOLUCION_DE_PROBLEMAS.md](docs/SOLUCION_DE_PROBLEMAS.md) y [docs
 - [MCP Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/).
 - [PowerDesigner 16.5: OLE Automation](https://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc38628.1653/doc/html/rad1232022697945.html).
 
-## Validación de esta entrega
+## Validación de esta rama (05/11/2026)
 
-Compilación sintáctica de Python y pruebas simuladas de rutas con ObjectID y símbolos sin ObjectID. No se ejecutaron PowerShell, COM, PowerDesigner ni la conexión real desde este entorno Linux. Las dependencias usan un rango de versiones, no un lockfile reproducible.
+- GitHub Actions: compilación sintáctica de Python y registro de las 11 herramientas MCP aprobados.
+- Windows 11, Python 3.12 y PowerDesigner 16.5.0.3982: importación de las 11 herramientas y conexión COM confirmadas.
+- `inspeccionar_diagrama`: lectura de 22 símbolos de un diagrama de clases de prueba.
+- `mover_paquetes`: previsualización, movimiento real y restauración de posición original verificados.
+- `enderezar_flechas` e `insertar_codo_flecha`: previsualización, edición real y restauración de los tres puntos originales de una dependencia verificadas.
+- `guardar_modelo`: guardado, cierre y reapertura de la copia de prueba; geometría conservada.
+
+**Limitaciones pendientes:** no se realizaron pruebas exhaustivas de errores ni de seguridad, no se probó una instalación limpia en otra computadora y todavía no hay matriz de compatibilidad entre versiones de PowerDesigner. Las dependencias usan rangos de versiones, sin lockfile reproducible. No fusionar a `main` hasta revisar la seguridad y la documentación de instalación.

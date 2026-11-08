@@ -1,0 +1,61 @@
+name: Verificar servidor MCP
+
+on:
+  push:
+    branches:
+      - feature/integrar-geometria-mcp
+  pull_request:
+    paths:
+      - "servidor.py"
+      - ".github/workflows/verificar-servidor.yml"
+
+jobs:
+  validacion-estatica:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probar bloqueo de puerto sin credenciales
+        shell: pwsh
+        run: |
+          ./tests/test_iniciador_puerto.ps1
+
+      - name: Comprobar sintaxis y contrato de herramientas
+        shell: bash
+        run: |
+          python -m py_compile servidor.py seguridad.py tests/test_seguridad.py
+          python -m unittest discover -s tests -v
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          root = ast.parse(Path("servidor.py").read_text(encoding="utf-8"))
+          tools = {
+              node.name
+              for node in root.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+              and any(
+                  isinstance(decorator, ast.Call)
+                  and isinstance(decorator.func, ast.Attribute)
+                  and isinstance(decorator.func.value, ast.Name)
+                  and decorator.func.value.id == "mcp"
+                  and decorator.func.attr == "tool"
+                  for decorator in node.decorator_list
+              )
+          }
+          expected = {
+              "consultar_modelo_activo", "listar_coleccion",
+              "leer_propiedades", "editar_propiedad", "crear_objeto",
+              "mostrar_en_diagrama", "guardar_modelo",
+              "inspeccionar_diagrama", "mover_paquetes",
+              "enderezar_flechas", "insertar_codo_flecha",
+          }
+          assert tools == expected, f"Herramientas MCP inesperadas: {tools ^ expected}"
+          print(f"OK: sintaxis valida y {len(tools)} herramientas MCP registradas")
+          PY

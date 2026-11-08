@@ -110,15 +110,18 @@ Copy-Item config.example.json config.local.json
 notepad config.local.json
 ```
 
-Reemplazá solo el valor del ID y guardá JSON válido:
+Reemplazá el identificador del túnel y guardá un JSON válido. Por seguridad, las modificaciones están deshabilitadas inicialmente (`write_model` vacío):
 
 ```json
 {
-  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO"
+  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO",
+  "write_model": ""
 }
 ```
 
 El iniciador conecta ese túnel a `http://127.0.0.1:8000/mcp`. No pegues esa URL en el campo ID del túnel de ChatGPT.
+
+Para permitir modificaciones exclusivamente sobre **un modelo concreto**, escribí su ruta absoluta existente en `write_model`. En JSON las barras invertidas deben duplicarse, por ejemplo: `"write_model": "C:\\Modelos\\prueba.oom"`. Reiniciá el servidor para aplicar el cambio. El modelo original no queda autorizado solo por estar abierto en PowerDesigner.
 
 ## 9. Arranque normal con doble clic
 
@@ -130,7 +133,7 @@ El iniciador conecta ese túnel a `http://127.0.0.1:8000/mcp`. No pegues esa URL
 6. El cliente del túnel debe iniciar sin errores repetidos de autenticación. `tunnel-client started` indica que arrancó el proceso, no demuestra por sí solo que PowerDesigner responde.
 7. Cuando el cliente use el puerto de salud predeterminado, abrí http://127.0.0.1:8080/ui para revisar su estado.
 
-No ejecutes el iniciador varias veces: puede dejar clientes del túnel duplicados. El chequeo del puerto 8000 no verifica la identidad del proceso ni la disponibilidad COM.
+No ejecutes el iniciador varias veces: puede dejar clientes del túnel duplicados. **En esta rama el iniciador rechaza un puerto 8000 ya ocupado** y no reutiliza un proceso anterior. Primero cerrá el servidor previo. El chequeo del puerto no verifica la disponibilidad COM ni autentica solicitudes del puerto local.
 
 Para crear un acceso de escritorio, hacé clic derecho sobre `Iniciar-MCP.cmd` → Mostrar más opciones → Enviar a → Escritorio (crear acceso directo), o creá un acceso directo desde el menú de Windows.
 
@@ -163,11 +166,15 @@ Las rutas devueltas pueden usar ObjectID o un índice como `Symbols:@0`. No cons
 
 ## 12. Qué puede editar esta versión
 
-`editar_propiedad` admite únicamente Name, Code, Comment y Description. `crear_objeto` crea Actors o UseCases; `mostrar_en_diagrama` utiliza AttachObject. Las colecciones dependen del tipo de modelo.
+El servidor publica **11 herramientas**: `consultar_modelo_activo`, `listar_coleccion`, `leer_propiedades`, `editar_propiedad`, `crear_objeto`, `mostrar_en_diagrama`, `guardar_modelo`, `inspeccionar_diagrama`, `mover_paquetes`, `enderezar_flechas` e `insertar_codo_flecha`.
 
-No permite editar Expression, multiplicidades, tamaños, posiciones ni marcos opt. Tampoco incluye ejecución arbitraria de Python. Para esas operaciones hay que implementar y probar herramientas adicionales, no cambiar permisos en ChatGPT. Esta limitación corresponde al servidor aportado y se mantiene explícita en el repositorio.
+Las funciones de geometría permiten consultar posiciones, mover **símbolos de paquetes**, enderezar dependencias y agregar un codo a una dependencia de dos puntos en **diagramas de clases**. No reordenan automáticamente todo el diagrama. La coordenadas son unidades internas de PowerDesigner y las operaciones de geometría previsualizan por defecto (`confirmar=False`): solo `confirmar=True` aplica cambios en memoria.
 
-Antes de editar, identificá el modelo y el objeto exacto. Antes de la primera modificación de cada archivo durante una ejecución, se copia la versión guardada en disco. Los cambios nuevos quedan en memoria hasta ejecutar `guardar_modelo` o guardar manualmente. No existe rollback automático.
+`editar_propiedad` admite únicamente Name, Code, Comment y Description. `crear_objeto` crea Actors o UseCases; `mostrar_en_diagrama` utiliza AttachObject. Las colecciones dependen del tipo de modelo. **No** se implementó edición de Expression, multiplicidades, tamaños, marcos opt ni ejecución arbitraria de Python.
+
+**Seguridad:** el servidor es de solo lectura por defecto. Toda herramienta que escribe necesita `write_model` con la ruta absoluta del archivo activo autorizado; la autorización por ruta no reemplaza la autenticación ni la confianza en los clientes que usan el túnel. Revisá el nombre y la ruta antes de aplicar cambios.
+
+Antes de la primera modificación de cada archivo durante un proceso, se respalda la versión guardada en disco. Si existen cambios sin guardar, la copia no los incluirá. Las ediciones quedan en memoria hasta ejecutar `guardar_modelo` o guardar manualmente. Hay intentos de restauración para algunas operaciones geométricas, pero **no hay rollback transaccional**: comprobá el diagrama y conservá el respaldo ante errores.
 
 ## 13. Uso posterior y apagado
 
@@ -175,7 +182,7 @@ Cada día: PowerDesigner con el modelo → doble clic en Iniciar-MCP.cmd → sel
 
 Mantené Internet y evitá la suspensión. Para terminar, guardá los cambios que quieras conservar, presioná Ctrl+C en la ventana del túnel y en la del servidor, y cerralas.
 
-Si editaste servidor.py, detené el proceso anterior antes de iniciar la nueva versión: el iniciador reutiliza cualquier proceso que ya esté escuchando en 8000. Actualizá las herramientas del complemento si cambió su catálogo.
+Si editaste `servidor.py` o `write_model`, detené el proceso anterior antes de iniciar la nueva versión: el iniciador **no** reutiliza procesos que ya estén escuchando en 8000. Actualizá las herramientas del complemento si cambió su catálogo.
 
 Si hay 401, revisá la clave y los permisos. Para reemplazar la clave almacenada, con el iniciador detenido:
 
