@@ -1,9 +1,6 @@
 ---
 name: powerdesigner-mcp
 description: Use when the user asks to inspect an open PowerDesigner model, list packages or UML objects, read class-diagram geometry, create actors or use cases, adjust package positions, or reroute dependency arrows using a connected PowerDesigner MCP server.
-summary: Inspect and safely modify supported PowerDesigner models and class diagrams through an existing Windows MCP server, with previews, explicit approval and read-back verification.
-version: "0.2.0"
-docs_url: https://github.com/d4vdxh1/powerdesigner-mcp
 ---
 
 # PowerDesigner MCP — model inspection and controlled editing
@@ -90,4 +87,4 @@ Detailed scenarios are in [workflows](references/workflows.md) and [setup](refer
 
 **After changing:** action attempted | tool's actual success/error | values read back | saved vs memory-only | backup and any recovery caveats.
 
-For a **fictional illustrative dialogue** (not real execution evidence), see [examples](examples/example-session.md).
+For a **fictional illustrative dialogue** (not real execution evidence), see [examples](examples/example-session.md). See [compatibility evidence](references/compatibility.md) before asserting support for a client.
