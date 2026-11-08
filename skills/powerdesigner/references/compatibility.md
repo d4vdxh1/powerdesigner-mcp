@@ -30,4 +30,4 @@ Statuses below describe **verified testing** versus **not yet tested** environme
 
 A skill by itself cannot complete any of these MCP access checks.
 
-Evidence and scope: [ChatGPT and Claude Free validation — 2026-11-08](../../../docs/VALIDACION_AGENTES_2026-11-08.md).
+Evidence and scope: [ChatGPT and Claude Free validation — 2026-11-08](https://github.com/d4vdxh1/powerdesigner-mcp/blob/main/docs/VALIDACION_AGENTES_2026-11-08.md).
