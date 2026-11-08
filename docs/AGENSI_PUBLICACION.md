@@ -8,8 +8,9 @@ The deliverable is a **skill document package**. It guides an agent using the **
 
 ## Packaging scope
 
-Inside the ZIP root:
+Inside the ZIP root (six files total):
 - `SKILL.md` (frontmatter and agent instructions).
+- `LICENSE` — copy of the project's MIT license, included in every distributable skill ZIP.
 - `references/setup.md`, `references/workflows.md` and `references/compatibility.md`.
 - `examples/example-session.md` — **fictional example**, not a live demo.
 
@@ -39,12 +40,13 @@ Do not bundle the repository root, Python environment, proprietary executables, 
 - [x] Existing server implements 11 tools and default-deny editing, tested on a model copy.
 - [x] Skill has explicit usage triggers, confirmation rules, workflows, requirements, and limitations.
 - [ ] Validate Agensi's current accepted ZIP layout, optional frontmatter fields, listing and account rules using the actual submission UI.
-- [ ] Select and verify licenses for the skill documents and the server source before redistribution or sale. Public source alone **does not grant an open-source license**.
+- [x] Apply MIT to original publicly released server code and Free skill documents; bundle a MIT `LICENSE` file in the ZIP.
+- [ ] Review exact licenses and notice requirements of third-party dependencies and the proprietary PowerDesigner installation before distributing a bundled installer; MIT applies only to our original files.
 - [x] Verify real MCP **read-only tool calls from ChatGPT** (`consultar_modelo_activo`, `listar_coleccion`); the live model is not a public demo.
 - [x] Import the skill in **Claude Free** and check that its instructions are interpreted, including refusal to invent results when MCP tools are absent (user-provided responses).
 - [ ] Validate **the skill and a connected PowerDesigner MCP server together in a client**, with real tool calls and permission prompts; Claude Free had no MCP PowerDesigner tools connected.
 - [ ] Validate clean server installation on another Windows device or state clearly that this has not been done.
-- [ ] Create and inspect a clean ZIP, rooted at `SKILL.md`, with no secrets or proprietary contents.
+- [ ] Create and inspect a clean ZIP, rooted at `SKILL.md`, `LICENSE`, `references/` and `examples/`, with no secrets or proprietary contents.
 - [ ] Produce a **genuine** test-model demonstration (screenshots/video/logs), not only the fictional example.
 - [ ] Confirm Agensi account/review/pricing/disclosures and marketplace policies.
 - [ ] Obtain the author's explicit approval before submitting any public marketplace listing.
@@ -55,7 +57,7 @@ Do not bundle the repository root, Python environment, proprietary executables, 
 Compress-Archive -Path .\skills\powerdesigner\* -DestinationPath .\powerdesigner-skill.zip -Force
 ~~~
 
-Inspect the archive structure before submission. The ZIP should begin with `SKILL.md`, `references/` and `examples/`, never the entire repository.
+Inspect the archive structure before submission. The ZIP should include `SKILL.md`, `LICENSE`, `references/` and `examples/`, never the entire repository.
 
 **Release decision:** suitable as a development candidate; **not ready to publish publicly** until the unchecked gates are addressed.
 
@@ -76,8 +78,13 @@ py -3.12 scripts/pack_skill.py --check
 py -3.12 scripts/pack_skill.py
 ~~~
 
-El validador verifica nombre y descripción del frontmatter, las once herramientas documentadas, referencias relativas, codificación UTF-8, tamaño y una lista cerrada de cinco archivos Markdown. Rechaza archivos inesperados, enlaces locales rotos y patrones evidentes de credenciales.
+El validador verifica nombre y descripción del frontmatter, las once herramientas documentadas, referencias relativas, codificación UTF-8, tamaño y una lista cerrada de cinco archivos Markdown y un archivo LICENSE. Rechaza archivos inesperados, enlaces locales rotos y patrones evidentes de credenciales.
 
 GitHub Actions ejecuta la validación y publica el ZIP como **artefacto de CI** en el workflow `Verificar y empaquetar skill Agensi`. Un artefacto CI **no es** una publicación en Agensi ni una validación en un cliente agente real.
 
-**Estado:** el ZIP generado es candidato de distribución, sujeto a las verificaciones de licencias, cliente, demostración y revisión de la propia plataforma. No subir al marketplace sin aprobación específica.
+**Estado:** el ZIP generado es candidato de distribución, sujeto a las verificaciones de licencias de terceros, cliente, demostración y revisión de la propia plataforma. No subir al marketplace sin aprobación específica.
+
+
+## MIT applied to public project (08/11/2026)
+
+The root [`LICENSE`](../LICENSE) covers the author's original source code and documentation in this public repository. The skill distribution includes an identical `skills/powerdesigner/LICENSE`, so the permission and copyright notice travel with the ZIP. No SAP PowerDesigner executables, models or third-party libraries are relicensed by this notice. The repository does not provide or include any PRO implementation; the current Free skill remains available under MIT. Verify third-party notices prior to any distribution bundling dependencies. No marketplace publication is authorized by this change.

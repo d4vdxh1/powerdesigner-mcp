@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skills" / "powerdesigner"
 EXPECTED = (
     "SKILL.md",
+    "LICENSE",
     "references/workflows.md",
     "references/setup.md",
     "references/compatibility.md",
