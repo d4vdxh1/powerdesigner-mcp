@@ -161,11 +161,15 @@ Para ejecutar las pruebas automatizadas:
 - [x] Consolidar 11 herramientas MCP y pruebas iniciales de seguridad.
 - [x] Integrar el código validado en `main` mediante [PR #1](https://github.com/d4vdxh1/powerdesigner-mcp/pull/1).
 - [ ] Mejorar instalación, documentación y distribución.
-- [ ] Crear una **skill de PowerDesigner** reutilizable para agentes, con procedimientos y ejemplos.
+- [x] Preparar la **skill v0.1 de PowerDesigner** con [SKILL.md](skills/powerdesigner/SKILL.md), [procedimientos](skills/powerdesigner/references/workflows.md) e [instalación](skills/powerdesigner/references/setup.md). Su uso con clientes externos y su publicación siguen pendientes de validación.
 - [ ] Validar la conexión con Claude Code, Cursor y Codex.
 - [ ] Preparar demostración, empaquetado y eventual publicación en **Agensi**.
 
 Las capacidades futuras no deben confundirse con funcionalidades disponibles hoy.
+
+## Skill para agentes (versión preliminar)
+
+La carpeta [`skills/powerdesigner/`](skills/powerdesigner/SKILL.md) contiene instrucciones que permiten a un agente conectado al **servidor MCP instalado por separado** explorar modelos y proponer cambios con confirmación previa. **Instalar la skill no instala PowerDesigner ni conecta automáticamente un cliente MCP.** Esta integración todavía no se ha probado en Claude Code, Cursor o Codex ni publicado en Agensi.
 
 ## Documentación y colaboración
 
