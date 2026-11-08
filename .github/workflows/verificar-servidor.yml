@@ -21,6 +21,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Probar bloqueo de puerto sin credenciales
+        shell: pwsh
+        run: |
+          ./tests/test_iniciador_puerto.ps1
+
       - name: Comprobar sintaxis y contrato de herramientas
         shell: bash
         run: |
