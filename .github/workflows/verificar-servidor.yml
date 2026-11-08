@@ -7,6 +7,8 @@ on:
   pull_request:
     paths:
       - "servidor.py"
+      - "geometria_validacion.py"
+      - "tests/**"
       - ".github/workflows/verificar-servidor.yml"
 
 jobs:
@@ -29,7 +31,7 @@ jobs:
       - name: Comprobar sintaxis y contrato de herramientas
         shell: bash
         run: |
-          python -m py_compile servidor.py seguridad.py tests/test_seguridad.py
+          python -m py_compile servidor.py seguridad.py geometria_validacion.py tests/test_seguridad.py tests/test_geometria_validacion.py
           python -m unittest discover -s tests -v
           python - <<'PY'
           import ast
