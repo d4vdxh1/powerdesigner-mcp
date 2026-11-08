@@ -184,7 +184,7 @@ Si encontrás un problema reproducible, abrí un [issue](https://github.com/d4vd
 
 ### Licencia
 
-**Todavía no se ha elegido una licencia para el código propio de este repositorio.** La visibilidad pública del repositorio no implica autorización automática para redistribuirlo o comercializarlo. Antes de publicar paquetes para terceros se debe definir esa licencia y revisar las de las dependencias. PowerDesigner y otros componentes externos mantienen sus respectivas condiciones.
+**Licencia MIT** para el código y los documentos propios publicados en este repositorio, incluida la skill gratuita. Ver [LICENSE](LICENSE). Se permite el uso, modificación y redistribución, incluso comercial, conservando el aviso de copyright y licencia. El ZIP de la skill incluye su propia copia de `LICENSE` para conservar este aviso en la distribución. **MIT no otorga derechos sobre SAP/Sybase PowerDesigner** ni sobre otras dependencias, que conservan sus condiciones de licencia. Las extensiones que se desarrollen por separado en el futuro no quedan incluidas en este repositorio ni en esta licencia por el mero hecho de utilizar el núcleo MIT.
 
 ---
 
