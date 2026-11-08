@@ -1,151 +1,185 @@
-# PowerDesigner MCP para ChatGPT
+# PowerDesigner MCP
 
-Servidor MCP local que conecta PowerDesigner en Windows con ChatGPT mediante COM y Secure MCP Tunnel. Proyecto personal basado en una instalación de Sybase PowerDesigner 16.5.0.3982 y Python 3.12.10; no es un producto oficial de SAP ni de OpenAI.
+**Consultá y automatizá modelos de SAP/Sybase PowerDesigner desde asistentes de IA mediante Model Context Protocol (MCP).**
 
-**Empezá por la [guía completa paso a paso](docs/GUIA_PASO_A_PASO.md): instalación, creación de la clave de API y del túnel, conexión con ChatGPT, ejecución y resolución de errores.**
+![Estado](https://img.shields.io/badge/estado-en%20desarrollo-orange)
+![Herramientas](https://img.shields.io/badge/herramientas%20MCP-11-blue)
+![Plataforma](https://img.shields.io/badge/plataforma-Windows-0078D4)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB)
+
+PowerDesigner MCP es un servidor local en Python que utiliza la automatización **COM** de PowerDesigner. Permite a un cliente MCP consultar la estructura de un modelo, leer propiedades y ejecutar determinadas modificaciones controladas sin depender de una interfaz gráfica para cada acción.
+
+El proyecto se desarrolló y probó en **Windows 11, PowerDesigner 16.5.0.3982 y Python 3.12**. Está en desarrollo: **no es todavía una versión estable ni se ha validado su instalación en otros equipos**.
+
+> [!NOTE]
+> Este es un proyecto independiente, no oficial y sin afiliación con SAP ni OpenAI. Requiere una instalación y licencia de PowerDesigner aportadas por el usuario. No distribuye PowerDesigner ni sus componentes propietarios.
+
+**[Instalación detallada](docs/GUIA_PASO_A_PASO.md)** · **[Solución de problemas](docs/SOLUCION_DE_PROBLEMAS.md)** · **[Historial de cambios](CHANGELOG.md)** · **[Reportar un problema](https://github.com/d4vdxh1/powerdesigner-mcp/issues)**
+
+---
+
+## Qué permite hacer
+
+- **Explorar modelos:** conocer el modelo activo, navegar colecciones y consultar propiedades de objetos UML.
+- **Trabajar con elementos:** crear actores y casos de uso, modificar propiedades permitidas y representar elementos existentes en diagramas.
+- **Inspeccionar geometría:** obtener posiciones y dimensiones de símbolos, así como los puntos de dependencias en diagramas de clases.
+- **Ajustar diagramas:** mover símbolos de paquetes, enderezar dependencias o insertar un codo en una flecha, con previsualización antes de aplicar cambios.
+- **Controlar modificaciones:** operar en modo solo lectura por defecto; habilitar escritura únicamente para un archivo explícitamente autorizado.
+
+### Herramientas MCP disponibles
+
+| Herramienta | Operación | Tipo |
+| --- | --- | --- |
+| `consultar_modelo_activo` | Consulta versión, modelo y archivo abierto | Lectura |
+| `listar_coleccion` | Enumera objetos de una colección y devuelve sus rutas | Lectura |
+| `leer_propiedades` | Consulta propiedades y referencias de objetos | Lectura |
+| `inspeccionar_diagrama` | Inspecciona posiciones, dimensiones y puntos de dependencias | Lectura |
+| `editar_propiedad` | Edita `Name`, `Code`, `Comment` o `Description` | Escritura |
+| `crear_objeto` | Crea actores o casos de uso | Escritura |
+| `mostrar_en_diagrama` | Adjunta un objeto existente a un diagrama | Escritura |
+| `mover_paquetes` | Previsualiza o mueve símbolos de paquetes | Escritura controlada |
+| `enderezar_flechas` | Previsualiza o elimina puntos intermedios de dependencias | Escritura controlada |
+| `insertar_codo_flecha` | Previsualiza o agrega un punto intermedio | Escritura controlada |
+| `guardar_modelo` | Guarda el modelo activo | Escritura |
+
+Las herramientas geométricas se limitan a **diagramas de clases**. Las tres operaciones geométricas aplican cambios en memoria solo con `confirmar=True`; después es necesario guardar el modelo. No se incluye un organizador automático integral de diagramas.
 
 ## Arquitectura
 
-ChatGPT → Secure MCP Tunnel → tunnel-client en Windows → servidor MCP en `127.0.0.1:8000/mcp` → PowerDesigner mediante COM.
+```mermaid
+flowchart LR
+    A["Cliente MCP<br/>ChatGPT"] --> B["Secure MCP Tunnel"]
+    B --> C["Servidor FastMCP<br/>127.0.0.1:8000/mcp"]
+    C --> D["Automatización COM"]
+    D --> E["PowerDesigner<br/>Modelo activo"]
+```
 
-La computadora debe permanecer encendida, conectada a Internet y sin suspender mientras se utiliza el complemento.
-
-## Qué contiene esta versión
-
-La rama `feature/integrar-geometria-mcp` integra las siete herramientas originales con cuatro herramientas de geometría verificadas en PowerDesigner 16.5 sobre un **modelo de prueba**. No es una versión estable ni está lista para distribución general.
-
-| Herramienta | Función |
-|---|---|
-| `consultar_modelo_activo` | Consultar versión, nombre y archivo del modelo activo |
-| `listar_coleccion` | Enumerar objetos y obtener sus rutas |
-| `leer_propiedades` | Leer propiedades y extremos de relaciones |
-| `editar_propiedad` | Cambiar únicamente Name, Code, Comment y Description |
-| `crear_objeto` | Crear actores o casos de uso |
-| `mostrar_en_diagrama` | Representar un objeto existente en un diagrama |
-| `guardar_modelo` | Ejecutar Save sobre el modelo activo |
-| `inspeccionar_diagrama` | Leer geometría de símbolos en diagramas de clases, sin cambios |
-| `mover_paquetes` | Previsualizar o mover símbolos de paquetes por coordenadas |
-| `enderezar_flechas` | Previsualizar o quitar puntos intermedios de dependencias |
-| `insertar_codo_flecha` | Previsualizar o insertar un punto intermedio en una dependencia de dos puntos |
-
-Las tres herramientas que editan geometría usan `confirmar=False` por defecto. Solo `confirmar=True` aplica modificaciones **en memoria**; para persistirlas hay que guardar el modelo. Trabajan únicamente sobre diagramas de clases y requieren identificadores de objetos obtenidos mediante inspección.
-
-Esta versión **no** incluye ejecución arbitraria de Python en PowerDesigner, edición de multiplicidades ni edición de expresiones de decisiones. Tampoco implementa reordenamiento automático integral de un diagrama: las coordenadas y dependencias concretas deben suministrarse explícitamente.
-
-Se conserva HTTP sin estado para evitar depender de sesiones conservadas entre reinicios. Las rutas de símbolos sin `ObjectID` usan índices de enumeración `@0`, `@1`, etc.; después de agregar o eliminar objetos hay que volver a listar la colección. La integración se probó mediante COM en PowerDesigner 16.5 con un modelo de prueba; esto no garantiza compatibilidad con otros modelos, versiones o computadoras.
+Actualmente, la instalación documentada utiliza **OpenAI Secure MCP Tunnel** para conectar ChatGPT con el servidor local. El transporte HTTP del servidor es MCP; la compatibilidad con **Claude Code, Cursor y Codex** forma parte de la hoja de ruta y **no se declara todavía verificada**.
 
 ## Requisitos
 
-- Windows con PowerShell y PowerDesigner instalado y registrado para COM.
-- Python 3.12 con el comando `py` disponible.
-- Una cuenta y un espacio de ChatGPT que permitan agregar MCP personalizados.
-- Acceso a túneles en OpenAI Platform. Crear un túnel requiere Tunnels Read + Manage; ejecutarlo requiere Read + Use.
-- Una clave de API de ejecución válida de la organización correspondiente y el identificador del túnel.
-- Cliente oficial `tunnel-client` para Windows. La prueba original utilizó v0.0.18.
+| Componente | Requisito |
+| --- | --- |
+| Sistema operativo | Windows; pruebas realizadas en Windows 11 |
+| Aplicación | PowerDesigner instalado y accesible por COM; pruebas con 16.5.0.3982 |
+| Python | Python 3.12 con lanzador `py` |
+| Dependencias | `mcp` y `pywin32`, instaladas desde `requirements.txt` |
+| ChatGPT mediante túnel | Acceso al complemento MCP, un túnel autorizado de OpenAI Platform y `tunnel-client.exe` |
 
-## 1. Instalar
+La aplicación PowerDesigner debe estar abierta con un modelo activo. El servidor utiliza la sesión COM del usuario de Windows.
 
-Descargá o cloná el repositorio y abrí PowerShell en su carpeta:
+## Inicio rápido
+
+### 1. Preparar el entorno
+
+Cloná el repositorio y ejecutá el instalador desde PowerShell:
 
 ```powershell
+git clone https://github.com/d4vdxh1/powerdesigner-mcp.git
+cd powerdesigner-mcp
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\instalar.ps1
 ```
 
-El instalador crea `.venv`, instala dependencias y genera `config.local.json` si no existe. No modifica PowerDesigner.
+El instalador crea el entorno virtual `.venv`, instala dependencias y genera `config.local.json` a partir del ejemplo si aún no existe.
 
-## 2. Probar COM
+### 2. Configurar la conexión
 
-Abrí PowerDesigner con un modelo y ejecutá:
+Para utilizar el **inicio con túnel**, descargá el cliente oficial de OpenAI y colocá `tunnel-client.exe` en el directorio del proyecto. Creá o seleccioná el túnel en [OpenAI Platform](https://platform.openai.com/settings/organization/tunnels).
+
+Configuración mínima de `config.local.json`:
+
+```json
+{
+  "tunnel_id": "tunnel_TU_IDENTIFICADOR",
+  "write_model": ""
+}
+```
+
+`write_model` vacío mantiene la escritura **deshabilitada**. No guardes claves de API en el archivo de configuración ni lo subas a GitHub. La [guía paso a paso](docs/GUIA_PASO_A_PASO.md) explica los permisos y la configuración del túnel.
+
+### 3. Ejecutar
+
+Con PowerDesigner abierto y un modelo guardado, iniciá el servidor y el túnel:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "import win32com.client; pd=win32com.client.Dispatch('PowerDesigner.Application'); print(pd.Version); m=pd.ActiveModel; print(m.Name if m is not None else 'Sin modelo activo')"
+.\Iniciar-MCP.cmd
 ```
 
-Si falla, resolvé primero el registro COM, la instalación o los permisos de la aplicación. Ejecutá PowerDesigner y el servidor con el mismo usuario y nivel de privilegios.
+El iniciador comprueba la configuración y **rechaza el arranque si el puerto 8000 ya está ocupado**, para evitar reutilizar inadvertidamente otro servidor. La clave del túnel, cuando sea necesaria, se almacena cifrada para el usuario de Windows.
 
-## 3. Crear el túnel y descargar su cliente
+También es posible iniciar **solo el servidor local**, sin el túnel, para pruebas con un cliente MCP compatible:
 
-1. Abrí [Túneles de OpenAI Platform](https://platform.openai.com/settings/organization/tunnels).
-2. Creá un túnel con nombre y descripción. Asociá la organización y el espacio de ChatGPT que lo usará.
-3. Copiá el identificador completo `tunnel_…`.
-4. Descargá el cliente desde Platform o las [releases oficiales](https://github.com/openai/tunnel-client/releases/latest). Para Windows Intel/AMD x64 elegí el ZIP `windows-amd64`; para Windows ARM, `windows-arm64`.
-5. Extraé el paquete conservando los archivos acompañantes en una carpeta temporal y colocá `tunnel-client.exe` y cualquier archivo de ejecución requerido por esa distribución junto a `servidor.py`. Este repositorio no redistribuye esos binarios.
-6. En [API keys de Platform](https://platform.openai.com/settings/organization/api-keys), generá una clave de ejecución con permisos para usar el túnel; no uses una clave de administración en el iniciador.
-
-Abrí `config.local.json` y reemplazá el valor de ejemplo:
-
-```json
-{
-  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO"
-}
+```powershell
+.\.venv\Scripts\python.exe servidor.py
 ```
 
-La clave secreta no se escribe en este JSON.
+Este inicio directo mantiene la escritura bloqueada si no está definida la variable de autorización. El endpoint MCP local es `http://127.0.0.1:8000/mcp`; abrir esa URL en un navegador **no equivale** a probar una solicitud MCP.
 
-## 4. Iniciar con doble clic
+### 4. Probar primero en lectura
 
-1. Abrí y guardá el modelo en PowerDesigner con Ctrl+S.
-2. Hacé doble clic en `Iniciar-MCP.cmd`. Podés crear un acceso directo en el escritorio.
-3. La primera vez ingresá la clave de API cuando se solicite. PowerShell la guarda como SecureString cifrado para el usuario de Windows en `clave_tunel.xml`.
-4. Dejá abiertas las ventanas del servidor y del cliente del túnel.
+En el cliente conectado, comenzá con:
 
-En esta rama, el iniciador se detiene si el puerto 8000 está ocupado, para evitar reutilizar inadvertidamente un proceso anterior sin la política de escritura. Detené la instancia previa antes de iniciar esta versión. No abras varios clientes del mismo túnel.
+> Consultá el modelo activo de PowerDesigner. No realices ninguna modificación.
 
-## 5. Conectar ChatGPT
+Después podés solicitar que liste los diagramas u objetos disponibles. **Usá una copia de un modelo para las primeras pruebas de escritura.**
 
-Con el túnel ejecutándose, agregá un servidor MCP personalizado desde Complementos/Plugins. Usá el nombre PowerDesigner MCP, seleccioná **Túnel** y pegá su identificador. Este servidor no implementa OAuth: elegí **Sin autenticación** en ese formulario. Eso no elimina la autenticación del cliente del túnel con Platform.
+## Seguridad y respaldo
 
-Conectá el complemento y probá: «Consultá el modelo activo de PowerDesigner». Después: «Listá la colección UseCaseDiagrams del modelo activo». El tipo de modelo determina qué colecciones existen.
+La seguridad de esta versión parte de cuatro reglas:
 
-Si cambian las herramientas del servidor, actualizalas desde ChatGPT o reconectá el complemento. No es un paso de uso diario obligatorio.
+1. **Solo lectura por defecto.** Las herramientas mutadoras, incluido el guardado, rechazan solicitudes cuando no hay un archivo autorizado.
+2. **Autorización por archivo.** Para permitir escritura, indicá en `config.local.json` la ruta absoluta existente del único modelo autorizado mediante `write_model` y reiniciá el iniciador. El modelo activo debe coincidir con esa ruta.
+3. **Respaldo antes de editar.** En la primera modificación de un archivo durante cada ejecución, el servidor copia su versión guardada en disco. Ese respaldo **no incluye cambios previos sin guardar**.
+4. **Acceso restringido a localhost.** FastMCP escucha en `127.0.0.1:8000`. Esto **no es autenticación de clientes**; no expongas el endpoint directamente en una red pública.
 
-## Protección de escritura (rama en desarrollo)
+> [!CAUTION]
+> Las operaciones sobre PowerDesigner pueden fallar parcialmente y **no existe rollback transaccional general**. Comprobá los resultados en PowerDesigner y conservá respaldos independientes de tus modelos antes de autorizar modificaciones.
 
-Por defecto, el servidor funciona **en modo solo lectura**. Las herramientas que modifican el modelo (incluido `guardar_modelo`) rechazan la operación si no hay un archivo autorizado.
+Nunca publiques `config.local.json`, `clave_tunel.xml`, claves de API, modelos `.oom`, copias de respaldo ni ejecutables de terceros.
 
-Para habilitar escrituras sobre **un solo archivo**, completá en `config.local.json` el campo opcional `write_model` con la ruta absoluta de ese modelo, por ejemplo:
+## Pruebas y estado del proyecto
 
-```json
-{
-  "tunnel_id": "tunnel_TU_IDENTIFICADOR_COMPLETO",
-  "write_model": "C:\\Modelos\\modelo_prueba.oom"
-}
+**Validado en el entorno de desarrollo:**
+
+- Registro de las **11 herramientas** MCP y pruebas automatizadas de autorización.
+- Comunicación HTTP/MCP: inicialización, listado de herramientas y rechazo de guardado no autorizado.
+- Conexión COM con PowerDesigner 16.5.
+- Inspección de un diagrama de prueba; movimiento y restauración de un paquete y de puntos de una dependencia.
+- Guardado, reapertura y verificación de geometría restaurada sobre una **copia de prueba**.
+- Comprobaciones del iniciador PowerShell y GitHub Actions.
+
+Para ejecutar las pruebas automatizadas:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-La ruta debe existir. Reiniciá el servidor después de cambiar la configuración. Si dejás `write_model` vacío, no hay autorización de escritura. No alcanza con tener el archivo abierto: el modelo activo debe coincidir con esa ruta. Ejecutar `servidor.py` directamente sin definir la variable de entorno `POWERDESIGNER_MCP_WRITE_MODEL` también deja deshabilitadas las escrituras.
+**Pendiente:** comprobar una instalación limpia en otra computadora, ampliar la cobertura ante errores parciales y validar el arranque completo del túnel con la versión actualizada. Estas pruebas locales **no constituyen una auditoría integral de seguridad**.
 
-**Importante:** no expongas el puerto 8000 en la red ni consideres esta comparación de rutas un mecanismo de autenticación de usuarios. El iniciador se detiene si el puerto está ocupado en lugar de conectarse a un servidor previo que podría no tener estas protecciones. Las operaciones pueden fallar parcialmente y no tienen rollback transaccional.
+## Hoja de ruta
 
-## Uso diario y guardado
+- [x] Consolidar 11 herramientas MCP y pruebas iniciales de seguridad.
+- [x] Integrar el código validado en `main` mediante [PR #1](https://github.com/d4vdxh1/powerdesigner-mcp/pull/1).
+- [ ] Mejorar instalación, documentación y distribución.
+- [ ] Crear una **skill de PowerDesigner** reutilizable para agentes, con procedimientos y ejemplos.
+- [ ] Validar la conexión con Claude Code, Cursor y Codex.
+- [ ] Preparar demostración, empaquetado y eventual publicación en **Agensi**.
 
-Abrí PowerDesigner con el modelo y hacé doble clic en `Iniciar-MCP.cmd`. Al terminar, guardá lo que corresponda y presioná Ctrl+C en las dos ventanas.
+Las capacidades futuras no deben confundirse con funcionalidades disponibles hoy.
 
-Antes de la primera modificación de cada archivo durante una ejecución, el servidor copia la versión del archivo guardada en disco a un nombre con `_respaldo_` y fecha. No captura cambios previos que estén solamente en memoria. No hay rollback automático; una operación puede dejar cambios parciales. Las ediciones no se guardan hasta usar `guardar_modelo` o guardar manualmente.
+## Documentación y colaboración
 
-## Seguridad y distribución
+- [Guía completa de instalación y conexión](docs/GUIA_PASO_A_PASO.md)
+- [Solución de problemas](docs/SOLUCION_DE_PROBLEMAS.md)
+- [Publicación y precauciones al compartir el repositorio](docs/PUBLICAR_EN_GITHUB.md)
+- [Historial de cambios](CHANGELOG.md)
 
-No subas tu carpeta de instalación completa. Excluí `clave_tunel.xml`, `config.local.json`, `.venv`, binarios, modelos, respaldos y registros. `.gitignore` ayuda para Git, pero no filtra archivos al cargarlos manualmente por la web. El servidor queda ligado a loopback; no lo expongas sin protección en la red.
+Si encontrás un problema reproducible, abrí un [issue](https://github.com/d4vdxh1/powerdesigner-mcp/issues) e indicá el comportamiento observado, versión de Windows/PowerDesigner y pasos para reproducirlo, **sin incluir credenciales ni datos de modelos privados**.
 
-Las claves cifradas no deben compartirse. Cada persona debe crear su configuración y sus credenciales. El proyecto se entrega sin licencia de redistribución propia elegida; los componentes de terceros conservan sus licencias originales y se descargan por separado.
+### Licencia
 
-## Problemas comunes
+**Todavía no se ha elegido una licencia para el código propio de este repositorio.** La visibilidad pública del repositorio no implica autorización automática para redistribuirlo o comercializarlo. Antes de publicar paquetes para terceros se debe definir esa licencia y revisar las de las dependencias. PowerDesigner y otros componentes externos mantienen sus respectivas condiciones.
 
-Consultá [docs/SOLUCION_DE_PROBLEMAS.md](docs/SOLUCION_DE_PROBLEMAS.md) y [docs/PUBLICAR_EN_GITHUB.md](docs/PUBLICAR_EN_GITHUB.md).
+---
 
-## Referencias oficiales
-
-- [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
-- [Cliente del túnel: guía v0.0.18](https://github.com/openai/tunnel-client/blob/v0.0.18/docs/onboarding.md).
-- [MCP Python SDK v1](https://py.sdk.modelcontextprotocol.io/v1/).
-- [PowerDesigner 16.5: OLE Automation](https://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc38628.1653/doc/html/rad1232022697945.html).
-
-## Validación de esta rama (05/11/2026)
-
-- GitHub Actions: compilación sintáctica de Python y registro de las 11 herramientas MCP aprobados.
-- Windows 11, Python 3.12 y PowerDesigner 16.5.0.3982: importación de las 11 herramientas y conexión COM confirmadas.
-- `inspeccionar_diagrama`: lectura de 22 símbolos de un diagrama de clases de prueba.
-- `mover_paquetes`: previsualización, movimiento real y restauración de posición original verificados.
-- `enderezar_flechas` e `insertar_codo_flecha`: previsualización, edición real y restauración de los tres puntos originales de una dependencia verificadas.
-- `guardar_modelo`: guardado, cierre y reapertura de la copia de prueba; geometría conservada.
-
-**Limitaciones pendientes:** no se realizaron pruebas exhaustivas de errores ni de seguridad, no se probó una instalación limpia en otra computadora y todavía no hay matriz de compatibilidad entre versiones de PowerDesigner. Las dependencias usan rangos de versiones, sin lockfile reproducible. No fusionar a `main` hasta revisar la seguridad y la documentación de instalación.
+<sub>Proyecto independiente desarrollado para explorar la automatización de modelos de PowerDesigner mediante Model Context Protocol. No distribuye software propietario ni credenciales.</sub>
