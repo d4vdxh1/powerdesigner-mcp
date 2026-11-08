@@ -40,9 +40,9 @@ No es una página web: requiere solicitudes MCP y encabezados concretos. Una pru
 
 Abrí el modelo en la misma sesión de Windows y guardalo con Ctrl+S. El servidor requiere un archivo existente antes de editar. Conservá una copia manual adicional si hay cambios importantes.
 
-## La herramienta no permite Expression, multiplicidades o posiciones
+## La herramienta no permite Expression, multiplicidades o determinados cambios de geometría
 
-Es una limitación de esta versión, no un permiso de ChatGPT. El archivo aportado usa una lista explícita de propiedades editables. Esas operaciones requieren ampliar el servidor y comprobar el metamodelo concreto; no basta con modificar la descripción del complemento.
+Esta versión **sí** permite inspeccionar posiciones y mover **símbolos de paquetes** en diagramas de clases, además de enderezar dependencias e insertarles un codo. No permite mover arbitrariamente cualquier clase, cambiar tamaños, multiplicidades ni Expression; tampoco ofrece reorganización automática integral de diagramas. La edición de propiedades está limitada a Name, Code, Comment y Description. Son límites del servidor, no permisos del complemento de ChatGPT.
 
 ## La clave cifrada no abre en otra computadora
 
