@@ -40,7 +40,9 @@ Do not bundle the repository root, Python environment, proprietary executables, 
 - [x] Skill has explicit usage triggers, confirmation rules, workflows, requirements, and limitations.
 - [ ] Validate Agensi's current accepted ZIP layout, optional frontmatter fields, listing and account rules using the actual submission UI.
 - [ ] Select and verify licenses for the skill documents and the server source before redistribution or sale. Public source alone **does not grant an open-source license**.
-- [ ] Validate the skill with **at least one real connected agent client** and capture actual tool calls, permission prompts and failures.
+- [x] Verify real MCP **read-only tool calls from ChatGPT** (`consultar_modelo_activo`, `listar_coleccion`); the live model is not a public demo.
+- [x] Import the skill in **Claude Free** and check that its instructions are interpreted, including refusal to invent results when MCP tools are absent (user-provided responses).
+- [ ] Validate **the skill and a connected PowerDesigner MCP server together in a client**, with real tool calls and permission prompts; Claude Free had no MCP PowerDesigner tools connected.
 - [ ] Validate clean server installation on another Windows device or state clearly that this has not been done.
 - [ ] Create and inspect a clean ZIP, rooted at `SKILL.md`, with no secrets or proprietary contents.
 - [ ] Produce a **genuine** test-model demonstration (screenshots/video/logs), not only the fictional example.
@@ -56,6 +58,14 @@ Compress-Archive -Path .\skills\powerdesigner\* -DestinationPath .\powerdesigner
 Inspect the archive structure before submission. The ZIP should begin with `SKILL.md`, `references/` and `examples/`, never the entire repository.
 
 **Release decision:** suitable as a development candidate; **not ready to publish publicly** until the unchecked gates are addressed.
+
+## Evidence obtained on 08/11/2026
+
+- [Read-only end-to-end ChatGPT MCP connection and Claude Free skill-instruction tests](VALIDACION_AGENTES_2026-11-08.md).
+- **No Claude MCP integration verified:** Claude Free successfully loaded the skill, but could not call the separate PowerDesigner server.
+- The test used the user's existing modeling project, so **do not publish model names, local paths or actual UML contents as a public demo**.
+- Next demonstration should use a separate **synthetic, non-sensitive** model.
+- ZIP remains an automated CI build artifact, **not** a released marketplace item.
 
 ## Empaquetado reproducible automatizado
 

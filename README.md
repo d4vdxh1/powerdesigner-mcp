@@ -154,7 +154,9 @@ Para ejecutar las pruebas automatizadas:
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-**Pendiente:** comprobar una instalación limpia en otra computadora, ampliar la cobertura ante errores parciales y validar el arranque completo del túnel con la versión actualizada. Estas pruebas locales **no constituyen una auditoría integral de seguridad**.
+**Actualización (08/11/2026):** se verificó el túnel actualizado desde ChatGPT mediante **dos llamadas reales de solo lectura**. La skill v0.2.0 se importó en Claude Free y sus instrucciones fueron interpretadas correctamente, pero **Claude no tenía el MCP PowerDesigner conectado**. Detalles y límites en [evidencias de validación](docs/VALIDACION_AGENTES_2026-11-08.md).
+
+**Pendiente:** comprobar una instalación limpia en otra computadora, ampliar la cobertura ante errores parciales y probar una skill y sus herramientas MCP conectadas juntas en un cliente adicional. Estas pruebas locales **no constituyen una auditoría integral de seguridad**.
 
 ## Hoja de ruta
 

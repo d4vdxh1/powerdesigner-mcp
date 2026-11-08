@@ -5,7 +5,9 @@
 - Fusionado PR #1 con las 11 herramientas y protección de escritura por modelo autorizado.
 - README profesional integrado por PR #2.
 - Skill preliminar integrada por PR #3 bajo `skills/powerdesigner/`.
-- Auditoría documental posterior: uso seguro de herramientas, ejemplo ilustrativo, matriz de compatibilidad, checklist de publicación y correcciones de documentación desactualizada (en revisión, sin nuevo release público).
+- PR #4 integrado: auditoría de seguridad documental, ejemplos, matriz de compatibilidad y checklist de publicación.
+- PR #5 integrado: empaquetado ZIP de la skill y validación automatizada en GitHub Actions.
+- 08/11/2026: conexión MCP real de solo lectura desde ChatGPT (dos herramientas), importación del ZIP v0.2.0 en Claude Free y evaluación de instrucciones sin conector MCP; ver [evidencias](docs/VALIDACION_AGENTES_2026-11-08.md). No hay release público en Agensi.
 
 
 ## Preparación para repositorio — 2026-10-30
