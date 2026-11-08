@@ -55,4 +55,6 @@ Localhost is not client authentication. Never bind the server to public interfac
 - Never include keys, `clave_tunel.xml`, `config.local.json`, models, backups, PowerDesigner executables or third-party tunnel binaries.
 - The current skill is an **instruction package**, not a standalone application. Its actual capabilities depend on the user's installed software and active MCP connection.
 - The repo has no chosen source-code license yet. Resolve licensing and third-party redistribution conditions before any commercial release.
+
+For tested/untested status see [compatibility](compatibility.md). For the independent publication checklist see [Agensi readiness](https://github.com/d4vdxh1/powerdesigner-mcp/blob/main/docs/AGENSI_PUBLICACION.md).
 - Refer to [troubleshooting](https://github.com/d4vdxh1/powerdesigner-mcp/blob/main/docs/SOLUCION_DE_PROBLEMAS.md).
