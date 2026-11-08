@@ -468,6 +468,12 @@ def enderezar_flechas(
             for p in plan:
                 _sustituir_puntos(p["_simbolo"], p["despues"])
             _refrescar(diagrama)
+            for p in plan:
+                leida = _puntos(p["_simbolo"])
+                if leida != p["despues"]:
+                    raise RuntimeError(
+                        f"Trayectoria no confirmada para {p['objeto_id']}: {leida}"
+                    )
         except Exception as exc:
             for p in plan:
                 try:
@@ -519,6 +525,11 @@ def insertar_codo_flecha(
         try:
             simbolo.ListOfPoints.InsertPoint(1, x, y)
             _refrescar(diagrama)
+            leida = _puntos(simbolo)
+            if leida != despues:
+                raise RuntimeError(
+                    f"Trayectoria no confirmada para {dependencia_id}: {leida}"
+                )
         except Exception as exc:
             try:
                 _sustituir_puntos(simbolo, antes)
@@ -530,7 +541,7 @@ def insertar_codo_flecha(
             ) from exc
         return {
             "aplicado": True, "antes": antes,
-            "despues": _puntos(simbolo), "respaldo": respaldo,
+            "despues": leida, "respaldo": respaldo,
         }
 
 if __name__ == "__main__":
