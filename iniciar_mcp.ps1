@@ -2,13 +2,7 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 try {
-    $archivoClave = Join-Path $PSScriptRoot "clave_tunel.xml"
-
-    if (-not (Test-Path $archivoClave)) {
-        $clave = Read-Host "Pega tu clave de API de OpenAI" -AsSecureString
-        $clave | Export-Clixml -Path $archivoClave
-    }
-
+    # Validar requisitos antes de solicitar credenciales o iniciar procesos.
     # Leer configuracion antes de iniciar el servidor: modo solo lectura por defecto.
     $archivoConfig = Join-Path $PSScriptRoot "config.local.json"
     if (-not (Test-Path $archivoConfig)) {
@@ -28,6 +22,16 @@ try {
         }
     }
 
+    if ($config.tunnel_id -notmatch '^tunnel_[a-z0-9_]+$' -or $config.tunnel_id -eq 'tunnel_REEMPLAZAR') {
+        throw "Configura un tunnel_id valido en config.local.json."
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "tunnel-client.exe") -PathType Leaf)) {
+        throw "Descarga y extrae tunnel-client.exe en esta carpeta. Consulta README.md."
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot ".venv\Scripts\python.exe") -PathType Leaf)) {
+        throw "Falta el entorno Python. Ejecuta instalar.ps1 antes de iniciar."
+    }
+
     # Inicia el servidor en otra ventana si el puerto esta libre.
     $servidorActivo = Get-NetTCPConnection `
         -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
@@ -35,6 +39,12 @@ try {
     if ($servidorActivo) {
         throw "El puerto 8000 ya esta ocupado. Detene la instancia anterior antes de iniciar este servidor protegido."
     }
+    $archivoClave = Join-Path $PSScriptRoot "clave_tunel.xml"
+    if (-not (Test-Path -LiteralPath $archivoClave -PathType Leaf)) {
+        $clave = Read-Host "Pega tu clave de API de OpenAI" -AsSecureString
+        $clave | Export-Clixml -Path $archivoClave
+    }
+
     if (-not $servidorActivo) {
         # El proceso hijo hereda solo la ruta autorizada; no hereda claves API.
         $anterior = [Environment]::GetEnvironmentVariable("POWERDESIGNER_MCP_WRITE_MODEL", "Process")
@@ -60,15 +70,9 @@ try {
         [System.Net.NetworkCredential]::new("", $clave)
     ).Password
 
-    if ($config.tunnel_id -notmatch '^tunnel_[a-z0-9_]+$' -or $config.tunnel_id -eq 'tunnel_REEMPLAZAR') {
-        throw "Configura un tunnel_id valido en config.local.json."
-    }
     $env:CONTROL_PLANE_TUNNEL_ID = $config.tunnel_id
     $env:MCP_SERVER_URL = "http://127.0.0.1:8000/mcp"
 
-    if (-not (Test-Path ".\tunnel-client.exe")) {
-        throw "Descarga y extrae tunnel-client.exe en esta carpeta. Consulta README.md."
-    }
     & ".\tunnel-client.exe" run
     if ($LASTEXITCODE -ne 0) {
         throw "El cliente del tunel termino con codigo $LASTEXITCODE."
