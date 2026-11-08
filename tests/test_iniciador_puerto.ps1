@@ -38,7 +38,7 @@ try {
         throw "El iniciador intento crear un proceso."
     }
 
-    $salida = . (Join-Path $temp "iniciar_mcp.ps1") 2>&1 | Out-String
+    $salida = . (Join-Path $temp "iniciar_mcp.ps1") 2>&1 6>&1 | Out-String
 
     if ($salida -notmatch "El puerto 8000 ya esta ocupado") {
         throw "No se observo el mensaje de rechazo esperado: $salida"
