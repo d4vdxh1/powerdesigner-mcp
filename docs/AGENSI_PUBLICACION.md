@@ -56,3 +56,18 @@ Compress-Archive -Path .\skills\powerdesigner\* -DestinationPath .\powerdesigner
 Inspect the archive structure before submission. The ZIP should begin with `SKILL.md`, `references/` and `examples/`, never the entire repository.
 
 **Release decision:** suitable as a development candidate; **not ready to publish publicly** until the unchecked gates are addressed.
+
+## Empaquetado reproducible automatizado
+
+El repositorio incluye una comprobación independiente de la integración de PowerDesigner:
+
+~~~powershell
+py -3.12 scripts/pack_skill.py --check
+py -3.12 scripts/pack_skill.py
+~~~
+
+El validador verifica nombre y descripción del frontmatter, las once herramientas documentadas, referencias relativas, codificación UTF-8, tamaño y una lista cerrada de cinco archivos Markdown. Rechaza archivos inesperados, enlaces locales rotos y patrones evidentes de credenciales.
+
+GitHub Actions ejecuta la validación y publica el ZIP como **artefacto de CI** en el workflow `Verificar y empaquetar skill Agensi`. Un artefacto CI **no es** una publicación en Agensi ni una validación en un cliente agente real.
+
+**Estado:** el ZIP generado es candidato de distribución, sujeto a las verificaciones de licencias, cliente, demostración y revisión de la propia plataforma. No subir al marketplace sin aprobación específica.

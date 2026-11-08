@@ -1,0 +1,42 @@
+name: Verificar y empaquetar skill Agensi
+
+on:
+  push:
+    branches:
+      - main
+      - feature/agensi-packaging
+    paths:
+      - 'skills/powerdesigner/**'
+      - 'scripts/pack_skill.py'
+      - '.github/workflows/empaquetar-skill.yml'
+  pull_request:
+    paths:
+      - 'skills/powerdesigner/**'
+      - 'scripts/pack_skill.py'
+      - '.github/workflows/empaquetar-skill.yml'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Obtener repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validar archivos y metadatos
+        run: python scripts/pack_skill.py --check
+      - name: Generar ZIP reproducible
+        run: python scripts/pack_skill.py
+      - name: Inspeccionar contenido ZIP
+        run: python -m zipfile -l dist/powerdesigner-mcp-skill.zip
+      - name: Publicar ZIP como artefacto de CI (no marketplace)
+        uses: actions/upload-artifact@v4
+        with:
+          name: powerdesigner-mcp-skill-candidate
+          path: dist/powerdesigner-mcp-skill.zip
+          if-no-files-found: error

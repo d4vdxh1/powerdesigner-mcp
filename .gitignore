@@ -17,3 +17,4 @@ config.local.json
 *_respaldo_*
 Respaldos_PowerDesignerMCP/
 servidor_anterior.py
+dist/

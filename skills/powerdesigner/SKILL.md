@@ -1,5 +1,11 @@
 ---
 name: powerdesigner-mcp
+summary: Inspect and modify supported PowerDesigner UML elements with agent-guided previews and explicit approvals using a separately installed MCP server.
+version: "0.2.0"
+tags: PowerDesigner, UML, MCP, Windows, modeling
+keywords: COM automation, class diagrams, package symbols, dependency routing, use cases
+use_cases: Inspect models, Read UML objects, Preview package moves, Straighten dependency arrows, Create use cases
+docs_url: https://github.com/d4vdxh1/powerdesigner-mcp
 description: Use when the user asks to inspect an open PowerDesigner model, list packages or UML objects, read class-diagram geometry, create actors or use cases, adjust package positions, or reroute dependency arrows using a connected PowerDesigner MCP server.
 ---
 
