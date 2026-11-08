@@ -1,5 +1,10 @@
 # Cambios
 
+## Licencia MIT para el proyecto público — 2026-11-08
+
+- Licencia MIT añadida al código y documentación propios del repositorio. El ZIP incorpora una copia de `LICENSE` para preservar los avisos legales.
+- No se alteran las licencias de terceros ni los requisitos de uso de SAP PowerDesigner. No se publica ni implementa ninguna funcionalidad PRO.
+
 ## Documentación y skill de preparación para Agensi — 2026-11-08
 
 - Fusionado PR #1 con las 11 herramientas y protección de escritura por modelo autorizado.
