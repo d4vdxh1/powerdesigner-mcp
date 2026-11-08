@@ -169,7 +169,7 @@ Las capacidades futuras no deben confundirse con funcionalidades disponibles hoy
 
 ## Skill para agentes (versión preliminar)
 
-La carpeta [`skills/powerdesigner/`](skills/powerdesigner/SKILL.md) contiene instrucciones que permiten a un agente conectado al **servidor MCP instalado por separado** explorar modelos y proponer cambios con confirmación previa. **Instalar la skill no instala PowerDesigner ni conecta automáticamente un cliente MCP.** Esta integración todavía no se ha probado en Claude Code, Cursor o Codex ni publicado en Agensi.
+La carpeta [`skills/powerdesigner/`](skills/powerdesigner/SKILL.md) contiene instrucciones que permiten a un agente conectado al **servidor MCP instalado por separado** explorar modelos y proponer cambios con confirmación previa. **Instalar la skill no instala PowerDesigner ni conecta automáticamente un cliente MCP.** Esta integración todavía no se ha probado en Claude Code, Cursor o Codex ni publicado en Agensi. Consultá la [matriz de compatibilidad](skills/powerdesigner/references/compatibility.md), la [sesión ilustrativa](skills/powerdesigner/examples/example-session.md) y la [lista de preparación para Agensi](docs/AGENSI_PUBLICACION.md).
 
 ## Documentación y colaboración
 
